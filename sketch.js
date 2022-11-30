@@ -59,7 +59,7 @@ function windowResized() {
 
 function draw() {
   clear();
-  animation(character, , 0);
+  animation(character, 36, 24);
 }
 
 function jump(sprite) {
