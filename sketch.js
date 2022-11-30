@@ -29,12 +29,11 @@ function setup() {
   const x = 250;
   const y = height;
 
-  // character = new Sprite(40, 0, 34);
-  character = loadAnimation('https://cdn.glitch.global/571c8687-b702-41da-b233-d5030686d2ac/character.png?v=1669779884775', { size: [216, 192], frames: 11 });
-  // character.addAni('right', 'img/animated/Character_right_0001.png', 6);
-  // character.addAni('left', 'img/animated/Character_left_0001.png', 6);
-  // character.ani = 'right';
-  // character.ani.stop();
+  character = new Sprite(40, 0, 34);
+  character.addAni('right', 'img/animated/Character_right_0001.png', 6);
+  character.addAni('left', 'img/animated/Character_left_0001.png', 6);
+  character.ani = 'right';
+  character.ani.stop();
 
   floor = new Sprite(width / 2, height, width, 200, "static");
   floor.color = "brown";
@@ -59,7 +58,6 @@ function windowResized() {
 
 function draw() {
   clear();
-  animation(character, 36, 24);
 }
 
 function jump(sprite) {
