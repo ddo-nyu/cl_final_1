@@ -63,7 +63,7 @@ function buildCharacter() {
   character.addAni('right', 'img/animated/Character_right_0001.png', 6);
   character.addAni('left', 'img/animated/Character_left_0001.png', 6);
   character.ani = 'right';
-  character.ani.stop();
+  character.ani.play();
 }
 
 async function setupModels() {
@@ -82,7 +82,7 @@ function setupRTC() {
   // Need to use the callback to get at the audio/video stream
   myAudio = createCapture(constraints, async function(stream) {
     console.log(stream)
-    character.ani.play();
+
 
     // Get a stream from the canvas to send
     canvasStream = myCanvas.elt.captureStream(15);
