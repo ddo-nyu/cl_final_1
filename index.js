@@ -75,6 +75,7 @@ io.on('connection', (socket) => {
 
         if (players.length < 1) {
             health = 9;
+            hasStarted = false;
         }
     });
 });

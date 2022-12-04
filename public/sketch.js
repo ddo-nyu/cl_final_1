@@ -19,12 +19,15 @@ let boulder;
 let battery;
 let allPlayers = [];
 let jumpMultiplier = 1;
-const maxHeight = -10;
+const maxHeight = -6;
 let isGameEnded = false;
 let isGameAlreadyStarted = false;
 let cloudImg;
+let floorImg;
+let floorXpos = [];
 let cloudsXpos;
 let cloudStartPosX = 0;
+let hasGameStarted = false;
 
 function preload() {
   // classifier = ml5.soundClassifier("SpeechCommands18w", {
@@ -32,6 +35,7 @@ function preload() {
   // });
   createStartButton();
   cloudImg = loadImage('assets/clouds.png');
+  floorImg = loadImage('assets/ground_0001.png');
 }
 
 function setup() {
@@ -46,14 +50,23 @@ function setup() {
   drawBoulder();
 
 
-  startButton.position(width /2, height /2);
+  startButton.position(width / 2 - (startButton.width / 2), height / 2 - (startButton.height / 2));
 
   cloudsXpos = [
-    cloudStartPosX,
-    cloudStartPosX + cloudImg.width,
-    cloudStartPosX + cloudImg.width * 2,
-    cloudStartPosX + cloudImg.width * 3,
+    0,
+    cloudImg.width,
+    cloudImg.width * 2,
+    cloudImg.width * 3,
+    cloudImg.width * 4,
   ];
+
+  floorXpos = [
+    0,
+    floorImg.width,
+    floorImg.width * 2,
+    floorImg.width * 3,
+    floorImg.width * 4,
+  ]
 }
 
 function keyPressed() {
@@ -69,6 +82,9 @@ function windowResized() {
 
 function draw() {
   clear();
+  background('#98f6fe');
+
+
   if (boulder?.x < 0) {
     boulder.x = width;
   }
@@ -88,12 +104,23 @@ function draw() {
   }
 
   cloudsXpos.forEach((cX, i) => {
-    image(cloudImg, cX, 0);
+    // image(cloudImg, cX, 0);
     cloudsXpos[i] -= 1;
   })
-  if (cloudsXpos[0] < (-1 * (cloudImg.width ))) {
+  if (cloudsXpos[0] < (-1 * (cloudImg.width))) {
+    cloudsXpos.push(cloudImg.width * 4 - 1);
     cloudsXpos.shift();
-    cloudsXpos.push(cloudStartPosX + cloudImg.width * 3 - 1);
+  }
+
+  floorXpos.forEach((fX, i) => {
+    image(floorImg, fX, height - floorImg.height);
+    if (hasGameStarted) {
+      floorXpos[i] -= 0.5;
+    }
+  });
+  if (floorXpos[0] < (-1 * (floorImg.width ))) {
+    floorXpos.shift();
+    floorXpos.push(cloudImg.width * 4 - 1);
   }
 }
 
@@ -138,8 +165,8 @@ function createSky() {
 }
 
 function createFloor() {
-  floor = new Sprite(width / 2, height - 100, width * 2, 200, "static");
-  floor.color = "brown";
+  floor = new Sprite(width / 2, height - (floorImg.height / 2), width * 2, 150, "static");
+  floor.visible = false;
 }
 
 function createHealthBattery() {
@@ -160,6 +187,7 @@ function startGame() {
   setupRTC();
   buildCharacter();
   startBoulder();
+  hasGameStarted = true;
   isGameEnded = false;
   battery.goToFrame(0);
 }
@@ -168,6 +196,7 @@ function endGame() {
   resetBoulder();
   character.visible = false;
   isGameEnded = true;
+  hasGameStarted = false;
   startButton.show();
 }
 
