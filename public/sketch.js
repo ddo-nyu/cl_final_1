@@ -1,10 +1,9 @@
 const socket = io();
 
-let playerId;
 let audioContext;
 let mic;
 let pitch;
-let button;
+let startButton;
 let classifier;
 let character;
 let floor;
@@ -14,50 +13,137 @@ let otherPlayers = [];
 let myCanvas;
 let canvasStream
 let p5lm;
-let hasStarted = false;
 let isJumping = false;
 let speechRec;
-let log;
+let boulder;
 let battery;
-let players = [];
+let allPlayers = [];
 let jumpMultiplier = 1;
+const maxHeight = -10;
+let isGameEnded = false;
+let isGameAlreadyStarted = false;
+let cloudImg;
+let cloudsXpos;
+let cloudStartPosX = 0;
 
-// function preload() {
-//   classifier = ml5.soundClassifier("SpeechCommands18w", {
-//     probabilityThreshold: 0.7,
-//   });
-// }
+function preload() {
+  // classifier = ml5.soundClassifier("SpeechCommands18w", {
+  //   probabilityThreshold: 0.7,
+  // });
+  createStartButton();
+  cloudImg = loadImage('assets/clouds.png');
+}
 
+function setup() {
+  myCanvas = createCanvas(windowWidth, windowHeight);
+  const publicPixelFont = loadFont('assets/PublicPixel.ttf');
+  textFont(publicPixelFont);
+
+  world.gravity.y = 10;
+
+  createFloor();
+  createHealthBattery();
+  drawBoulder();
+
+
+  startButton.position(width /2, height /2);
+
+  cloudsXpos = [
+    cloudStartPosX,
+    cloudStartPosX + cloudImg.width,
+    cloudStartPosX + cloudImg.width * 2,
+    cloudStartPosX + cloudImg.width * 3,
+  ];
+}
+
+function keyPressed() {
+  if (keyCode === 32) {
+    // jump(character);
+    endGame();
+  }
+}
+
+function windowResized() {
+  // resizeCanvas(windowWidth, windowHeight);
+}
+
+function draw() {
+  clear();
+  if (boulder?.x < 0) {
+    boulder.x = width;
+  }
+  if (character?.x < 0) {
+    character.x = width / 2;
+    character.y = height - 215;
+  }
+
+  text(`${allPlayers.length} players connected.`, (width / 2) - 100, 50);
+
+  if (isGameEnded) {
+    text('game over', (width / 2) - 50, height / 2);
+  }
+
+  if (isGameAlreadyStarted) {
+    text('game already started', (width / 2) - 100, height / 2);
+  }
+
+  cloudsXpos.forEach((cX, i) => {
+    image(cloudImg, cX, 0);
+    cloudsXpos[i] -= 1;
+  })
+  if (cloudsXpos[0] < (-1 * (cloudImg.width ))) {
+    cloudsXpos.shift();
+    cloudsXpos.push(cloudStartPosX + cloudImg.width * 3 - 1);
+  }
+}
+
+// socket functions
 socket.on('emit jump', function (params) {
   console.log('jump', params)
   jumpMultiplier = params.jumpHeightPercentage;
   jump(character);
 });
 
-function setup() {
-  playerId = guidGenerator();
-  socket.emit('new player', {
-    playerId,
-  })
+socket.on('all players', function ({ players }) {
+  allPlayers = players;
+});
 
-  myCanvas = createCanvas(windowWidth, windowHeight);
+socket.on('game started', function () {
+  startGame();
+});
 
-  world.gravity.y = 10;
+socket.on('game ended', function () {
+  endGame();
+});
 
-  // let inp = createInput('');
-  // inp.position(0, 0);
-  // inp.size(100);
-  // inp.input(myInputEvent);
+socket.on('game already started', function () {
+  startButton.hide();
+  isGameAlreadyStarted = true;
+})
 
-  // create start button
-  button = createButton("Start");
-  button.position(width /2, height /2);
-  button.mousePressed(startGame);
+// game functions
+function createStartButton() {
+  startButton = createButton("Start");
+  startButton.style('background-color', 'black');
+  startButton.style('color', 'white');
+  startButton.style('border', 'none');
+  startButton.style('padding', '10px 20px');
+  startButton.style('font-family', 'sans-serif');
+  startButton.mousePressed(() => socket.emit('start game'));
+}
 
+function createSky() {
+
+
+}
+
+function createFloor() {
   floor = new Sprite(width / 2, height - 100, width * 2, 200, "static");
   floor.color = "brown";
+}
 
-  battery = new Sprite(125, 50, 150, 20);
+function createHealthBattery() {
+  battery = new Sprite(125, 45, 150, 20);
   battery.addAni('drain', 'img/animated/battery_0001.png', 10);
   battery.ani.stop();
   battery.collider = 'static';
@@ -66,52 +152,43 @@ function setup() {
     alert('dead');
     // character.hide();
   }
-
-  drawLogs();
-
-
 }
 
-function drawLogs() {
-  log = new Sprite(loadImage('img/boulder.png'), width, height - 225);
-  log.x = width;
-  log.y = height - 225;
-  log.diameter = 50;
-  log.collider = 'kinematic';
+function startGame() {
+  startButton.hide();
+  setupModels();
+  setupRTC();
+  buildCharacter();
+  startBoulder();
+  isGameEnded = false;
+  battery.goToFrame(0);
 }
 
-function startLogs() {
-  log.vel.x = -5;
-  log.rotationSpeed = -5;
+function endGame() {
+  resetBoulder();
+  character.visible = false;
+  isGameEnded = true;
+  startButton.show();
 }
 
-function keyPressed() {
-  if (keyCode === 32) {
-    jump(character);
-  }
+function drawBoulder() {
+  boulder = new Sprite(loadImage('img/boulder.png'), width, height - floor.height);
+  boulder.x = width + boulder.width;
+  boulder.y = height - floor.height - (boulder.height / 2);
+  boulder.diameter = 50;
+  boulder.collider = 'kinematic';
 }
 
-// function windowResized() {
-//   resizeCanvas(windowWidth, windowHeight);
-// }
-
-function draw() {
-  clear();
-  if (log?.x < 0) {
-    log.x = width;
-  }
-  if (character?.x < 0) {
-    character.x = width / 2;
-    character.y = height - 215;
-  }
-
-  Object.keys(otherPlayers).forEach((id, i) => {
-    text(id, width / 2, (i * 10)+ 50);
-  })
+function startBoulder() {
+  boulder.vel.x = -5;
+  boulder.rotationSpeed = -5;
 }
 
-const maxHeight = -10;
-const maxFrequency = 800;
+function resetBoulder() {
+  boulder.vel.x = 0;
+  boulder.rotationSpeed = 0;
+  boulder.x = width + boulder.width;
+}
 
 function jump(sprite) {
   if (!isJumping) {
@@ -123,27 +200,15 @@ function jump(sprite) {
   }
 }
 
-// helper functions
-function startGame() {
-  button.hide();
-  if (!hasStarted) {
-    setupModels();
-    setupRTC();
-    buildCharacter();
-    // startLogs();
-    hasStarted = true;
-  }
-}
-
 function buildCharacter() {
-  character = new Sprite(width / 2, height - 215, 34);
+  character = new Sprite(width / 2, height - floor.height, 34);
   character.addAni('right', 'img/animated/Character_right_0001.png', 6);
   character.addAni('left', 'img/animated/Character_left_0001.png', 6);
   character.addAni('damage', 'img/animated/Character_damage_0001.png', 3);
   character.addAni('dead', 'img/animated/Character_dead_0001.png', 5);
   character.ani = 'right';
   character.bounciness = 0;
-  character.collide(log, setDamage);
+  character.collide(boulder, setDamage);
 
   character.ani.play();
 }
@@ -158,8 +223,10 @@ function setDamage() {
     character.collider = 'dynamic';
     character.ani = 'right';
   }, 1000);
+  socket.emit('character damaged');
 }
 
+// lib functions
 function setupModels() {
   audioContext = getAudioContext();
   mic = new p5.AudioIn();
@@ -186,16 +253,10 @@ function gotSpeech() {
     if (speechRec?.resultString.includes('jump')) {
       const d = new Date();
       const params = {
-        playerId,
-        action: 'jump',
-        // timestamp: new Date().getTime(),
-        // hours: d.getHours(),
-        // minutes: d.getMinutes(),
-        // seconds: d.getSeconds(),
         time: d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds(),
       };
       console.log(params)
-      socket.emit('submit data', params)
+      socket.emit('character jump', params)
     }
   }
 }
@@ -218,16 +279,14 @@ function setupRTC() {
     // Use the first audio track, add it to the canvas stream
     if (audioTracks.length > 0) {
       canvasStream.addTrack(audioTracks[0]);
-
-      audioTracks.forEach((at, i) => {
-        players.push('player ' + i);
-      })
     }
 
     // Give the canvas stream to SimpleSimplePeer as a "CAPTURE" stream
     p5lm = new p5LiveMedia(this, "CAPTURE", canvasStream, "SimpleSimplePeerAdvancedTest");
     p5lm.on('stream', gotStream);
-    p5lm.on('data', parseData);
+    p5lm.on('data', (data, id) => {
+      console.log(JSON.parse(data))
+    });
   });
   myAudio.elt.muted = true;
   myAudio.hide();
@@ -236,30 +295,6 @@ function setupRTC() {
 function gotStream(stream, id) {
   otherPlayers[id] = stream;
   otherPlayers[id].hide();
-  // otherPlayers[id] = stream.getAudioTracks()[0];
-}
-
-function parseData(data, id) {
-  console.log(JSON.parse(data))
-}
-
-function parseCommand(error, results) {
-  if (error) {
-    console.error(error);
-  }
-  switch (results[0].label) {
-    case "up":
-      jump(character);
-      break;
-    case "right":
-      character.ani = "right";
-      break;
-    case "left":
-      character.ani = "left";
-      break;
-    default:
-      break;
-  }
 }
 
 function modelLoaded() {
@@ -272,29 +307,10 @@ function getPitch() {
     if (frequency) {
       if (speechRec?.resultConfidence > 0.7) {
         if (speechRec?.resultString.includes('jump')) {
-          // jump(character);
 
-          // p5lm.send(JSON.stringify({
-          //   playerId,
-          //   action: 'jump',
-          //   frequency,
-          // }));
-
-          socket.emit('send data', {
-            playerId,
-            frequency,
-            action: 'jump'
-          })
         }
       }
     }
     getPitch();
   });
-}
-
-function guidGenerator() {
-  var S4 = function() {
-    return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
-  };
-  return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
 }

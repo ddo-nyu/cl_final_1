@@ -31,22 +31,50 @@ io = new io.Server(server);
 
 const players = [];
 const jumps = {};
+let hasStarted = false;
+let health = 9;
 
-//Listen for individual clients/users to connect
 io.on('connection', (socket) => {
-    console.log('We have a new client: ' + socket.id);
+    console.log('We have a new player: ' + socket.id);
+    players.push(socket.id);
+    io.emit('new player', { playerId: socket.id });
+    io.emit('all players', { players });
 
-    socket.on('new player', params => {
-        players.push(params);
-    });
+    if (hasStarted) {
+        io.to(socket.id).emit('game already started');
+    }
 
-    socket.on('submit data', params => {
-        if (params.action === 'jump') {
-            jumps[params.time] = jumps[params.time] ? jumps[params.time] + 1 : 1;
-        }
-        console.log(jumps);
+    socket.on('character jump', params => {
+        jumps[params.time] = jumps[params.time] ? jumps[params.time] + 1 : 1;
         const d = new Date();
         const jumpHeightPercentage = (jumps[d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds()] || 1) / players.length;
         io.emit('emit jump', {jumpHeightPercentage});
+    });
+
+    socket.on('character damaged', params => {
+        health = health - 1;
+        if (health < 1) {
+            io.emit('game ended');
+            health = 9;
+            hasStarted = false;
+        }
+    });
+
+    socket.on('start game', function () {
+        io.emit('game started');
+        hasStarted = true;
+        health = 9;
+    });
+
+    socket.on('disconnect', function() {
+        console.log('Got disconnect!');
+
+        const i = players.indexOf(socket.id);
+        players.splice(i, 1);
+        io.emit('all players', { players });
+
+        if (players.length < 1) {
+            health = 9;
+        }
     });
 });
