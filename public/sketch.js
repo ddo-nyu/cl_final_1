@@ -314,12 +314,12 @@ function setupModels() {
   // mic = new p5.AudioIn();
   // mic.start(startPitch);
 
-  // speechRec = new p5.SpeechRec();
-  // speechRec.onResult = gotSpeech;
-  // let continuous = false;
-  // let interimResults = false;
-  // speechRec.start(continuous, interimResults);
-  // speechRec.onEnd = restart;
+  speechRec = new p5.SpeechRec();
+  speechRec.onResult = gotSpeech;
+  let continuous = false;
+  let interimResults = false;
+  speechRec.start(continuous, interimResults);
+  speechRec.onEnd = restart;
 }
 
 function startPitch() {
