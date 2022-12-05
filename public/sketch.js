@@ -16,7 +16,6 @@ let p5lm;
 let isJumping = false;
 let speechRec;
 let boulder;
-let battery;
 let allPlayers = [];
 let jumpMultiplier = 1;
 const maxHeight = -6;
@@ -24,10 +23,12 @@ let isGameEnded = false;
 let isGameAlreadyStarted = false;
 let cloudImg;
 let floorImg;
+let heartImg;
 let floorXpos = [];
 let cloudsXpos;
-let cloudStartPosX = 0;
 let hasGameStarted = false;
+let heartXpos;
+let isMasterPlayer = false;
 
 function preload() {
   // classifier = ml5.soundClassifier("SpeechCommands18w", {
@@ -36,6 +37,7 @@ function preload() {
   createStartButton();
   cloudImg = loadImage('assets/clouds.png');
   floorImg = loadImage('assets/ground_0001.png');
+  heartImg = loadImage('assets/heart.png');
 }
 
 function setup() {
@@ -48,7 +50,6 @@ function setup() {
   world.gravity.y = 10;
 
   createFloor();
-  createHealthBattery();
   drawBoulder();
 
   startButton.position(windowWidth / 2 - (startButton.width / 2), windowHeight / 2 - (startButton.height / 2), 'fixed');
@@ -69,7 +70,13 @@ function setup() {
     floorImg.width * 4,
   ]
 
-  // resizeMain()
+  heartXpos = [
+    20,
+    20 + heartImg.width,
+    20 + heartImg.width * 2,
+    20 + heartImg.width * 3,
+    20 + heartImg.width * 4,
+  ];
 }
 
 function keyPressed() {
@@ -86,6 +93,10 @@ function windowResized() {
 function draw() {
   clear();
   background('#98f6fe');
+
+  if (hasGameStarted) {
+    heartXpos.forEach(h => image(heartImg, h, 20));
+  }
 
   if (boulder?.x < 0) {
     boulder.x = width;
@@ -137,6 +148,10 @@ socket.on('all players', function ({ players }) {
   allPlayers = players;
 });
 
+socket.on('master player', function () {
+  isMasterPlayer = true;
+});
+
 socket.on('game started', function () {
   startGame();
 });
@@ -152,7 +167,8 @@ socket.on('game already started', function () {
 
 socket.on('character damage', function ({ health }) {
   setDamage(health);
-})
+  heartXpos.pop();
+});
 
 // game functions
 function resizeMain() {
@@ -184,18 +200,6 @@ function createFloor() {
   floor.visible = false;
 }
 
-function createHealthBattery() {
-  battery = new Sprite(125, 45, 150, 20);
-  battery.addAni('drain', 'img/animated/battery_0001.png', 6);
-  battery.ani.stop();
-  battery.collider = 'static';
-  battery.ani.noLoop();
-  battery.ani.onComplete = () => {
-    alert('dead');
-    // character.hide();
-  }
-}
-
 function startGame() {
   startButton.hide();
   setupModels();
@@ -204,7 +208,6 @@ function startGame() {
   startBoulder();
   hasGameStarted = true;
   isGameEnded = false;
-  battery.ani.frame = 0;
 }
 
 function endGame() {
@@ -252,15 +255,17 @@ function buildCharacter() {
   character.addAni('dead', 'img/animated/Character_dead_0001.png', 5);
   character.ani = 'right';
   character.bounciness = 0;
-  character.collide(boulder, () => {
-    socket.emit('character damaged');
-  });
+
+  if (isMasterPlayer) {
+    character.collide(boulder, () => {
+      socket.emit('character damaged');
+    });
+  }
 
   character.ani.play();
 }
 
-function setDamage(health) {
-  battery.ani.frame = 5 - health;
+function setDamage() {
   character.ani = 'damage';
   character.x = width / 2;
   character.y = height - 216;

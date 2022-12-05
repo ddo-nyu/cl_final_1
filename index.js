@@ -40,8 +40,11 @@ let health = maxHealth;
 io.on('connection', (socket) => {
     console.log('We have a new player: ' + socket.id);
     players.push(socket.id);
-    io.emit('new player', { playerId: socket.id });
     io.emit('all players', { players });
+
+    if (players.length < 2) {
+        io.emit('master player');
+    }
 
     if (hasStarted) {
         io.to(socket.id).emit('game already started');
