@@ -34,7 +34,8 @@ const { DateTime } = require("luxon");
 const players = [];
 const jumps = {};
 let hasStarted = false;
-let health = 9;
+const maxHealth = 5;
+let health = maxHealth;
 
 io.on('connection', (socket) => {
     console.log('We have a new player: ' + socket.id);
@@ -56,9 +57,10 @@ io.on('connection', (socket) => {
 
     socket.on('character damaged', params => {
         health = health - 1;
+        io.emit('character damage', { health });
         if (health < 1) {
             io.emit('game ended');
-            health = 9;
+            health = maxHealth;
             hasStarted = false;
         }
     });
@@ -66,7 +68,7 @@ io.on('connection', (socket) => {
     socket.on('start game', function () {
         io.emit('game started');
         hasStarted = true;
-        health = 9;
+        health = maxHealth;
     });
 
     socket.on('disconnect', function() {
@@ -77,7 +79,7 @@ io.on('connection', (socket) => {
         io.emit('all players', { players });
 
         if (players.length < 1) {
-            health = 9;
+            health = maxHealth;
             hasStarted = false;
         }
     });

@@ -68,6 +68,8 @@ function setup() {
     floorImg.width * 3,
     floorImg.width * 4,
   ]
+
+  // resizeMain()
 }
 
 function keyPressed() {
@@ -96,7 +98,7 @@ function draw() {
   text(`${allPlayers.length} players connected.`, (width / 2) - 100, 50);
 
   if (isGameEnded) {
-    text('game over', (width / 2) - 50, height / 2);
+    text('game over', (width / 2) - 50, (height / 2) - 50);
   }
 
   if (isGameAlreadyStarted) {
@@ -148,7 +150,20 @@ socket.on('game already started', function () {
   isGameAlreadyStarted = true;
 })
 
+socket.on('character damage', function ({ health }) {
+  setDamage(health);
+})
+
 // game functions
+function resizeMain() {
+  const main = document.querySelector('main');
+
+  if (main.offsetWidth > windowWidth) {
+    const ratio = (windowWidth - 40) / main.offsetWidth;
+    main.style.transform = `scale(${ratio})`;
+  }
+}
+
 function createStartButton() {
   startButton = createButton("Start");
   startButton.style('background-color', 'black');
@@ -171,7 +186,7 @@ function createFloor() {
 
 function createHealthBattery() {
   battery = new Sprite(125, 45, 150, 20);
-  battery.addAni('drain', 'img/animated/battery_0001.png', 10);
+  battery.addAni('drain', 'img/animated/battery_0001.png', 6);
   battery.ani.stop();
   battery.collider = 'static';
   battery.ani.noLoop();
@@ -189,7 +204,7 @@ function startGame() {
   startBoulder();
   hasGameStarted = true;
   isGameEnded = false;
-  battery.goToFrame(0);
+  battery.ani.frame = 0;
 }
 
 function endGame() {
@@ -209,8 +224,8 @@ function drawBoulder() {
 }
 
 function startBoulder() {
-  boulder.vel.x = -5;
-  boulder.rotationSpeed = -5;
+  boulder.vel.x = -3;
+  boulder.rotationSpeed = -3;
 }
 
 function resetBoulder() {
@@ -237,13 +252,15 @@ function buildCharacter() {
   character.addAni('dead', 'img/animated/Character_dead_0001.png', 5);
   character.ani = 'right';
   character.bounciness = 0;
-  character.collide(boulder, setDamage);
+  character.collide(boulder, () => {
+    socket.emit('character damaged');
+  });
 
   character.ani.play();
 }
 
-function setDamage() {
-  battery.ani.nextFrame();
+function setDamage(health) {
+  battery.ani.frame = 5 - health;
   character.ani = 'damage';
   character.x = width / 2;
   character.y = height - 216;
@@ -252,7 +269,6 @@ function setDamage() {
     character.collider = 'dynamic';
     character.ani = 'right';
   }, 1000);
-  socket.emit('character damaged');
 }
 
 // lib functions
