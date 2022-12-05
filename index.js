@@ -29,6 +29,8 @@ server.listen(port, () => {
 let io = require('socket.io');
 io = new io.Server(server);
 
+const { DateTime } = require("luxon");
+
 const players = [];
 const jumps = {};
 let hasStarted = false;
@@ -46,8 +48,9 @@ io.on('connection', (socket) => {
 
     socket.on('character jump', params => {
         jumps[params.time] = jumps[params.time] ? jumps[params.time] + 1 : 1;
-        const d = new Date();
-        const jumpHeightPercentage = (jumps[d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds()] || 1) / players.length;
+        const d = DateTime.now().setZone("America/New_York");
+        const t = d.toFormat('HH:mm:ss');
+        const jumpHeightPercentage = (jumps[t] || 1) / players.length;
         io.emit('emit jump', {jumpHeightPercentage});
     });
 

@@ -49,7 +49,6 @@ function setup() {
   createHealthBattery();
   drawBoulder();
 
-
   startButton.position(width / 2 - (startButton.width / 2), height / 2 - (startButton.height / 2));
 
   cloudsXpos = [
@@ -83,7 +82,6 @@ function windowResized() {
 function draw() {
   clear();
   background('#98f6fe');
-
 
   if (boulder?.x < 0) {
     boulder.x = width;
@@ -280,9 +278,10 @@ function restart(){
 function gotSpeech() {
   if (speechRec?.resultConfidence > 0.7) {
     if (speechRec?.resultString.includes('jump')) {
-      const d = new Date();
+      const d = luxon.DateTime.now().setZone("America/New_York");
+      const t = d.toFormat('HH:mm:ss');
       const params = {
-        time: d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds(),
+        time: t,
       };
       console.log(params)
       socket.emit('character jump', params)
