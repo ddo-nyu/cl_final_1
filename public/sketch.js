@@ -39,7 +39,9 @@ function preload() {
 }
 
 function setup() {
-  myCanvas = createCanvas(windowWidth, windowHeight);
+  myCanvas = createCanvas(1000, 700);
+  // myCanvas.position((windowWidth / 2) - (myCanvas.width / 2), (windowHeight / 2) - (myCanvas.height / 2));
+
   const publicPixelFont = loadFont('assets/PublicPixel.ttf');
   textFont(publicPixelFont);
 
@@ -49,7 +51,7 @@ function setup() {
   createHealthBattery();
   drawBoulder();
 
-  startButton.position(width / 2 - (startButton.width / 2), height / 2 - (startButton.height / 2));
+  startButton.position(windowWidth / 2 - (startButton.width / 2), windowHeight / 2 - (startButton.height / 2), 'fixed');
 
   cloudsXpos = [
     0,
