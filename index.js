@@ -61,6 +61,7 @@ io.on('connection', (socket) => {
     socket.on('character damaged', params => {
         health = health - 1;
         io.emit('character damage', { health });
+        console.log('health', health);
         if (health < 1) {
             io.emit('game ended');
             health = maxHealth;

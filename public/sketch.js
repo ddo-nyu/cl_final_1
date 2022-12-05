@@ -29,6 +29,13 @@ let cloudsXpos;
 let hasGameStarted = false;
 let heartXpos;
 let isMasterPlayer = false;
+let characterText = '';
+let characterPhrases = [
+    'huh?',
+    'what did you say?',
+    "i didn't hear you",
+    'zzz...',
+];
 
 function preload() {
   // classifier = ml5.soundClassifier("SpeechCommands18w", {
@@ -70,19 +77,12 @@ function setup() {
     floorImg.width * 4,
   ]
 
-  heartXpos = [
-    20,
-    20 + heartImg.width,
-    20 + heartImg.width * 2,
-    20 + heartImg.width * 3,
-    20 + heartImg.width * 4,
-  ];
+  setFullHealth();
 }
 
 function keyPressed() {
   if (keyCode === 32) {
-    // jump(character);
-    endGame();
+    jump(character);
   }
 }
 
@@ -135,13 +135,19 @@ function draw() {
     floorXpos.shift();
     floorXpos.push(cloudImg.width * 4 - 1);
   }
+
+  if (character) {
+    text(characterText, character.x + 25, character.y - 25);
+  }
 }
 
 // socket functions
 socket.on('emit jump', function (params) {
-  console.log('jump', params)
-  jumpMultiplier = params.jumpHeightPercentage;
-  jump(character);
+  if (character) {
+    console.log('jump', params)
+    jumpMultiplier = params.jumpHeightPercentage;
+    jump(character);
+  }
 });
 
 socket.on('all players', function ({ players }) {
@@ -171,6 +177,16 @@ socket.on('character damage', function ({ health }) {
 });
 
 // game functions
+function setFullHealth() {
+  heartXpos = [
+    20,
+    20 + heartImg.width,
+    20 + heartImg.width * 2,
+    20 + heartImg.width * 3,
+    20 + heartImg.width * 4,
+  ];
+}
+
 function resizeMain() {
   const main = document.querySelector('main');
 
@@ -190,9 +206,14 @@ function createStartButton() {
   startButton.mousePressed(() => socket.emit('start game'));
 }
 
-function createSky() {
-
-
+function createRetartButton() {
+  startButton = createButton("Restart");
+  startButton.style('background-color', 'black');
+  startButton.style('color', 'white');
+  startButton.style('border', 'none');
+  startButton.style('padding', '10px 20px');
+  startButton.style('font-family', 'sans-serif');
+  startButton.mousePressed(() => socket.emit('start game'));
 }
 
 function createFloor() {
@@ -201,9 +222,10 @@ function createFloor() {
 }
 
 function startGame() {
+  setFullHealth();
   startButton.hide();
   setupModels();
-  setupRTC();
+  // setupRTC();
   buildCharacter();
   startBoulder();
   hasGameStarted = true;
@@ -216,6 +238,7 @@ function endGame() {
   isGameEnded = true;
   hasGameStarted = false;
   startButton.show();
+  character = null;
 }
 
 function drawBoulder() {
@@ -248,7 +271,11 @@ function jump(sprite) {
 }
 
 function buildCharacter() {
-  character = new Sprite(width / 2, height - floor.height, 34);
+  character = new Sprite();
+  character.height = 34;
+  character.width = 34;
+  resetCharacterPosition();
+
   character.addAni('right', 'img/animated/Character_right_0001.png', 6);
   character.addAni('left', 'img/animated/Character_left_0001.png', 6);
   character.addAni('damage', 'img/animated/Character_damage_0001.png', 3);
@@ -265,29 +292,34 @@ function buildCharacter() {
   character.ani.play();
 }
 
-function setDamage() {
-  character.ani = 'damage';
+function resetCharacterPosition() {
   character.x = width / 2;
-  character.y = height - 216;
+  character.y = height - floor.height - (character.height / 2);
+}
+
+function setDamage() {
   character.collider = 'static';
+  character.ani = 'damage';
+  resetCharacterPosition();
+
   setTimeout(() => {
     character.collider = 'dynamic';
     character.ani = 'right';
-  }, 1000);
+  }, 2000);
 }
 
 // lib functions
 function setupModels() {
   audioContext = getAudioContext();
-  mic = new p5.AudioIn();
-  mic.start(startPitch);
+  // mic = new p5.AudioIn();
+  // mic.start(startPitch);
 
-  speechRec = new p5.SpeechRec();
-  speechRec.onResult = gotSpeech;
-  let continuous = false;
-  let interimResults = false;
-  speechRec.start(continuous, interimResults);
-  speechRec.onEnd = restart;
+  // speechRec = new p5.SpeechRec();
+  // speechRec.onResult = gotSpeech;
+  // let continuous = false;
+  // let interimResults = false;
+  // speechRec.start(continuous, interimResults);
+  // speechRec.onEnd = restart;
 }
 
 function startPitch() {
@@ -301,6 +333,7 @@ function restart(){
 function gotSpeech() {
   if (speechRec?.resultConfidence > 0.7) {
     if (speechRec?.resultString.includes('jump')) {
+      characterText = '';
       const d = luxon.DateTime.now().setZone("America/New_York");
       const t = d.toFormat('HH:mm:ss');
       const params = {
@@ -310,6 +343,8 @@ function gotSpeech() {
       socket.emit('character jump', params)
     }
   }
+  const phrase = characterPhrases[round(random(0, characterPhrases.length))];
+  characterText = phrase;
 }
 
 function setupRTC() {
@@ -335,9 +370,9 @@ function setupRTC() {
     // Give the canvas stream to SimpleSimplePeer as a "CAPTURE" stream
     p5lm = new p5LiveMedia(this, "CAPTURE", canvasStream, "SimpleSimplePeerAdvancedTest");
     p5lm.on('stream', gotStream);
-    p5lm.on('data', (data, id) => {
-      console.log(JSON.parse(data))
-    });
+    // p5lm.on('data', (data, id) => {
+    //   console.log(JSON.parse(data))
+    // });
   });
   myAudio.elt.muted = true;
   myAudio.hide();
