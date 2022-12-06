@@ -139,6 +139,16 @@ function draw() {
   if (character) {
     text(characterText, character.x + 25, character.y - 25);
   }
+
+  if (isMasterPlayer) {
+    if (hasGameStarted) {
+      boulder.x -= 3;
+    }
+
+    socket.emit('set boulder position', {
+      x: boulder.x,
+    });
+  }
 }
 
 // socket functions
@@ -174,6 +184,10 @@ socket.on('game already started', function () {
 socket.on('character damage', function ({ health }) {
   setDamage(health);
   heartXpos.pop();
+});
+
+socket.on('get boulder position', function ({ x }) {
+  boulder.x = x;
 });
 
 // game functions
@@ -250,7 +264,7 @@ function drawBoulder() {
 }
 
 function startBoulder() {
-  boulder.vel.x = -3;
+  // boulder.vel.x = -3;
   boulder.rotationSpeed = -3;
 }
 

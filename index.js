@@ -75,6 +75,10 @@ io.on('connection', (socket) => {
         health = maxHealth;
     });
 
+    socket.on('set boulder position', function (params) {
+        socket.broadcast.emit('get boulder position', params);
+    });
+
     socket.on('disconnect', function() {
         console.log('Got disconnect!');
 
