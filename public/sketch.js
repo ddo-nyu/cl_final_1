@@ -244,7 +244,8 @@ function buildCharacter() {
   character = new Sprite();
   character.height = 34;
   character.width = 34;
-  resetCharacterPosition();
+  character.x = width / 2;
+  character.y = height - floor.height - (character.height / 2) - 40;
 
   character.addAni('right', 'img/animated/Character_right_0001.png', 6);
   character.addAni('left', 'img/animated/Character_left_0001.png', 6);
@@ -263,9 +264,8 @@ function buildCharacter() {
 }
 
 function resetCharacterPosition() {
-  character.x = width / 2;
-  character.y = height - floor.height - (character.height / 2) - 40;
-  character.rotationAngle = 0;
+  character.remove();
+  buildCharacter();
 }
 
 function setDamage() {
