@@ -47,7 +47,6 @@ function setup() {
   world.gravity.y = 10;
 
   createFloor();
-  drawBoulder();
 
   startButton.position(windowWidth / 2 - (startButton.width / 2), windowHeight / 2 - (startButton.height / 2), 'fixed');
 
@@ -58,8 +57,6 @@ function setup() {
     floorImg.width * 3,
     floorImg.width * 4,
   ]
-
-  setFullHealth();
 }
 
 function keyPressed() {
@@ -146,8 +143,10 @@ socket.on('game already started', function () {
 })
 
 socket.on('character damage', function ({ health }) {
-  setDamage(health);
   heartXpos.pop();
+  if (heartXpos.length > 0) {
+    setDamage(health);
+  }
 });
 
 socket.on('master player', function (params) {
@@ -190,11 +189,13 @@ function createFloor() {
 }
 
 function startGame() {
+  startButton.hide();
+
   hasGameStarted = true;
   isGameEnded = false;
 
   setFullHealth();
-  startButton.hide();
+  drawBoulder();
   buildCharacter();
   startBoulder();
 
@@ -202,12 +203,13 @@ function startGame() {
 }
 
 function endGame() {
-  resetBoulder();
-  character.visible = false;
+  boulder.remove();
+  character.remove();
+
   isGameEnded = true;
   hasGameStarted = false;
+
   startButton.show();
-  character = null;
 }
 
 function drawBoulder() {
