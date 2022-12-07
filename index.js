@@ -73,6 +73,10 @@ io.on('connection', (socket) => {
         health = maxHealth;
     });
 
+    socket.on('end game', function () {
+        io.emit('game ended');
+    })
+
     socket.on('disconnect', function() {
         console.log('Got disconnect!');
 
@@ -83,6 +87,7 @@ io.on('connection', (socket) => {
         if (players.length < 1) {
             health = maxHealth;
             hasStarted = false;
+            io.emit('game ended');
         }
     });
 });

@@ -63,9 +63,9 @@ function setup() {
 }
 
 function keyPressed() {
-  if (keyCode === 32) {
-    emitJump();
-  }
+  // if (keyCode === 32) {
+  //   emitJump();
+  // }
 }
 
 function windowResized() {
