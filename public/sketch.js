@@ -230,6 +230,7 @@ function jump(sprite) {
     console.log('jumping at', j);
     sprite.velocity.y = j;
     isJumping = false;
+    // characterText = '';
   }
 }
 
@@ -287,14 +288,14 @@ function restart(){
 }
 
 function gotSpeech() {
-  if (speechRec?.resultConfidence > 0.7) {
-    if (speechRec?.resultString.includes('jump')) {
-      characterText = '';
-      emitJump();
-    }
+  console.log(speechRec?.resultString, ', confidence', speechRec?.resultConfidence);
+  if ((speechRec?.resultConfidence > 0.5) && speechRec?.resultString.includes('jump')) {
+    characterText = 'ok!';
+    emitJump();
+  } else {
+    const phrase = characterPhrases[round(random(0, characterPhrases.length))];
+    characterText = phrase;
   }
-  const phrase = characterPhrases[round(random(0, characterPhrases.length))];
-  characterText = phrase;
 }
 
 function emitJump() {
