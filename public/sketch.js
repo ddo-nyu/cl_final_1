@@ -264,17 +264,17 @@ function buildCharacter() {
 
 function resetCharacterPosition() {
   character.x = width / 2;
-  character.y = height - floor.height - (character.height / 2);
+  character.y = height - floor.height - (character.height / 2) - 40;
   character.rotationAngle = 0;
 }
 
 function setDamage() {
   character.collider = 'static';
   character.ani = 'damage';
-  resetCharacterPosition();
 
   setTimeout(() => {
     character.collider = 'dynamic';
+    resetCharacterPosition();
     character.ani = 'right';
   }, 2000);
 }
