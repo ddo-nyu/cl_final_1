@@ -145,15 +145,21 @@ function draw() {
       boulder.x -= 3;
     }
 
-    socket.emit('set boulder position', {
-      x: boulder.x,
-    });
+    const params = {
+      boulder: { x: boulder.x },
+    };
+
+    if (character) {
+      params.character = { x: character.x, y: character.y };
+    }
+    socket.emit('set boulder position', params);
+
   }
 }
 
 // socket functions
 socket.on('emit jump', function (params) {
-  if (character) {
+  if (character && isMasterPlayer) {
     console.log('jump', params)
     jumpMultiplier = params.jumpHeightPercentage;
     jump(character);
@@ -186,8 +192,10 @@ socket.on('character damage', function ({ health }) {
   heartXpos.pop();
 });
 
-socket.on('get boulder position', function ({ x }) {
-  boulder.x = x;
+socket.on('get boulder position', function (params) {
+  boulder.x = params.boulder.x;
+  character.x = params.character.x;
+  character.y = params.character.y;
 });
 
 // game functions
