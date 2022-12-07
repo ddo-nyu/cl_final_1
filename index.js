@@ -39,12 +39,9 @@ let health = maxHealth;
 
 io.on('connection', (socket) => {
     console.log('We have a new player: ' + socket.id);
+    io.to(socket.id).emit({ playerId: socket.id });
     players.push(socket.id);
     io.emit('all players', { players });
-
-    if (players.length < 2) {
-        io.emit('master player');
-    }
 
     if (hasStarted) {
         io.to(socket.id).emit('game already started');
@@ -58,7 +55,7 @@ io.on('connection', (socket) => {
         io.emit('emit jump', {jumpHeightPercentage});
     });
 
-    socket.on('character damaged', params => {
+    socket.on('character damaged', () => {
         health = health - 1;
         io.emit('character damage', { health });
         console.log('health', health);
@@ -70,13 +67,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('start game', function () {
+        io.to(socket.id).emit('master player', { isMasterPlayer: true });
         io.emit('game started');
         hasStarted = true;
         health = maxHealth;
-    });
-
-    socket.on('set boulder position', function (params) {
-        socket.broadcast.emit('get boulder position', params);
     });
 
     socket.on('disconnect', function() {

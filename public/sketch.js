@@ -1,18 +1,9 @@
 const socket = io();
 
-let audioContext;
-let mic;
-let pitch;
 let startButton;
-let classifier;
 let character;
 let floor;
-let hop = 100;
-let myAudio;
-let otherPlayers = [];
 let myCanvas;
-let canvasStream
-let p5lm;
 let isJumping = false;
 let speechRec;
 let boulder;
@@ -21,11 +12,9 @@ let jumpMultiplier = 1;
 const maxHeight = -6;
 let isGameEnded = false;
 let isGameAlreadyStarted = false;
-let cloudImg;
 let floorImg;
 let heartImg;
 let floorXpos = [];
-let cloudsXpos;
 let hasGameStarted = false;
 let heartXpos;
 let isMasterPlayer = false;
@@ -38,18 +27,13 @@ let characterPhrases = [
 ];
 
 function preload() {
-  // classifier = ml5.soundClassifier("SpeechCommands18w", {
-  //   probabilityThreshold: 0.7,
-  // });
   createStartButton();
-  cloudImg = loadImage('assets/clouds.png');
   floorImg = loadImage('assets/ground_0001.png');
   heartImg = loadImage('assets/heart.png');
 }
 
 function setup() {
   myCanvas = createCanvas(1000, 700);
-  // myCanvas.position((windowWidth / 2) - (myCanvas.width / 2), (windowHeight / 2) - (myCanvas.height / 2));
 
   const publicPixelFont = loadFont('assets/PublicPixel.ttf');
   textFont(publicPixelFont);
@@ -60,14 +44,6 @@ function setup() {
   drawBoulder();
 
   startButton.position(windowWidth / 2 - (startButton.width / 2), windowHeight / 2 - (startButton.height / 2), 'fixed');
-
-  cloudsXpos = [
-    0,
-    cloudImg.width,
-    cloudImg.width * 2,
-    cloudImg.width * 3,
-    cloudImg.width * 4,
-  ];
 
   floorXpos = [
     0,
@@ -82,7 +58,7 @@ function setup() {
 
 function keyPressed() {
   if (keyCode === 32) {
-    jump(character);
+    emitJump();
   }
 }
 
@@ -98,9 +74,10 @@ function draw() {
     heartXpos.forEach(h => image(heartImg, h, 20));
   }
 
-  if (boulder?.x < 0) {
+  if (boulder?.x < -20) {
     boulder.x = width;
   }
+
   if (character?.x < 0) {
     character.x = width / 2;
     character.y = height - 215;
@@ -116,15 +93,6 @@ function draw() {
     text('game already started', (width / 2) - 100, height / 2);
   }
 
-  cloudsXpos.forEach((cX, i) => {
-    // image(cloudImg, cX, 0);
-    cloudsXpos[i] -= 1;
-  })
-  if (cloudsXpos[0] < (-1 * (cloudImg.width))) {
-    cloudsXpos.push(cloudImg.width * 4 - 1);
-    cloudsXpos.shift();
-  }
-
   floorXpos.forEach((fX, i) => {
     image(floorImg, fX, height - floorImg.height);
     if (hasGameStarted) {
@@ -133,33 +101,17 @@ function draw() {
   });
   if (floorXpos[0] < (-1 * (floorImg.width ))) {
     floorXpos.shift();
-    floorXpos.push(cloudImg.width * 4 - 1);
+    floorXpos.push(floorImg.width * 4 - 1);
   }
 
   if (character) {
     text(characterText, character.x + 25, character.y - 25);
   }
-
-  if (isMasterPlayer) {
-    if (hasGameStarted) {
-      boulder.x -= 3;
-    }
-
-    const params = {
-      boulder: { x: boulder.x },
-    };
-
-    if (character) {
-      params.character = { x: character.x, y: character.y };
-    }
-    socket.emit('set boulder position', params);
-
-  }
 }
 
 // socket functions
 socket.on('emit jump', function (params) {
-  if (character && isMasterPlayer) {
+  if (character) {
     console.log('jump', params)
     jumpMultiplier = params.jumpHeightPercentage;
     jump(character);
@@ -192,11 +144,9 @@ socket.on('character damage', function ({ health }) {
   heartXpos.pop();
 });
 
-socket.on('get boulder position', function (params) {
-  boulder.x = params.boulder.x;
-  character.x = params.character.x;
-  character.y = params.character.y;
-});
+socket.on('master player', function (params) {
+  isMasterPlayer = params.isMasterPlayer || false;
+})
 
 // game functions
 function setFullHealth() {
@@ -228,30 +178,21 @@ function createStartButton() {
   startButton.mousePressed(() => socket.emit('start game'));
 }
 
-function createRetartButton() {
-  startButton = createButton("Restart");
-  startButton.style('background-color', 'black');
-  startButton.style('color', 'white');
-  startButton.style('border', 'none');
-  startButton.style('padding', '10px 20px');
-  startButton.style('font-family', 'sans-serif');
-  startButton.mousePressed(() => socket.emit('start game'));
-}
-
 function createFloor() {
   floor = new Sprite(width / 2, height - (floorImg.height / 2), width * 2, 150, "static");
   floor.visible = false;
 }
 
 function startGame() {
-  setFullHealth();
-  startButton.hide();
-  setupModels();
-  // setupRTC();
-  buildCharacter();
-  startBoulder();
   hasGameStarted = true;
   isGameEnded = false;
+
+  setFullHealth();
+  startButton.hide();
+  buildCharacter();
+  startBoulder();
+
+  setupModels();
 }
 
 function endGame() {
@@ -272,7 +213,7 @@ function drawBoulder() {
 }
 
 function startBoulder() {
-  // boulder.vel.x = -3;
+  boulder.vel.x = -3;
   boulder.rotationSpeed = -3;
 }
 
@@ -317,6 +258,7 @@ function buildCharacter() {
 function resetCharacterPosition() {
   character.x = width / 2;
   character.y = height - floor.height - (character.height / 2);
+  character.rotationAngle = 0;
 }
 
 function setDamage() {
@@ -332,20 +274,12 @@ function setDamage() {
 
 // lib functions
 function setupModels() {
-  audioContext = getAudioContext();
-  // mic = new p5.AudioIn();
-  // mic.start(startPitch);
-
   speechRec = new p5.SpeechRec();
   speechRec.onResult = gotSpeech;
   let continuous = false;
   let interimResults = false;
   speechRec.start(continuous, interimResults);
   speechRec.onEnd = restart;
-}
-
-function startPitch() {
-  pitch = ml5.pitchDetection('./model/', audioContext , mic.stream, modelLoaded);
 }
 
 function restart(){
@@ -356,69 +290,16 @@ function gotSpeech() {
   if (speechRec?.resultConfidence > 0.7) {
     if (speechRec?.resultString.includes('jump')) {
       characterText = '';
-      const d = luxon.DateTime.now().setZone("America/New_York");
-      const t = d.toFormat('HH:mm:ss');
-      const params = {
-        time: t,
-      };
-      console.log(params)
-      socket.emit('character jump', params)
+      emitJump();
     }
   }
   const phrase = characterPhrases[round(random(0, characterPhrases.length))];
   characterText = phrase;
 }
 
-function setupRTC() {
-  // Use constraints to request audio from createCapture
-  let constraints = {
-    audio: true
-  };
-
-  // Need to use the callback to get at the audio/video stream
-  myAudio = createCapture(constraints, async function(stream) {
-    console.log(stream);
-    // Get a stream from the canvas to send
-    canvasStream = myCanvas.elt.captureStream(15);
-
-    // Extract the audio tracks from the stream
-    let audioTracks = stream.getAudioTracks();
-
-    // Use the first audio track, add it to the canvas stream
-    if (audioTracks.length > 0) {
-      canvasStream.addTrack(audioTracks[0]);
-    }
-
-    // Give the canvas stream to SimpleSimplePeer as a "CAPTURE" stream
-    p5lm = new p5LiveMedia(this, "CAPTURE", canvasStream, "SimpleSimplePeerAdvancedTest");
-    p5lm.on('stream', gotStream);
-    // p5lm.on('data', (data, id) => {
-    //   console.log(JSON.parse(data))
-    // });
-  });
-  myAudio.elt.muted = true;
-  myAudio.hide();
-}
-
-function gotStream(stream, id) {
-  otherPlayers[id] = stream;
-  otherPlayers[id].hide();
-}
-
-function modelLoaded() {
-  console.log("PitchDetection Model Loaded");
-  // getPitch();
-}
-
-function getPitch() {
-  pitch.getPitch(function (err, frequency) {
-    if (frequency) {
-      if (speechRec?.resultConfidence > 0.7) {
-        if (speechRec?.resultString.includes('jump')) {
-
-        }
-      }
-    }
-    getPitch();
-  });
+function emitJump() {
+  const d = luxon.DateTime.now().setZone("America/New_York");
+  const t = d.toFormat('HH:mm:ss');
+  const params = { time: t };
+  socket.emit('character jump', params)
 }
