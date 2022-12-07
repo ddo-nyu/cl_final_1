@@ -35,6 +35,12 @@ function preload() {
 function setup() {
   myCanvas = createCanvas(1000, 700);
 
+  if (windowWidth < myCanvas.width) {
+    const ratio = windowWidth / myCanvas.width;
+    document.querySelector('main').style.transform = `scale(${ratio})`;
+  }
+
+
   const publicPixelFont = loadFont('assets/PublicPixel.ttf');
   textFont(publicPixelFont);
 
