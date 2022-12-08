@@ -25,11 +25,14 @@ let characterPhrases = [
     "i didn't hear you",
     'zzz...',
 ];
+let showInstructionText = false;
+let backgroundImg;
 
 function preload() {
   createStartButton();
   floorImg = loadImage('assets/ground_0001.png');
   heartImg = loadImage('assets/heart.png');
+  backgroundImg = loadImage('assets/background.jpeg');
 }
 
 function setup() {
@@ -71,7 +74,11 @@ function windowResized() {
 
 function draw() {
   clear();
-  background('#98f6fe');
+  background('#82cbcb');
+
+  if (showInstructionText) {
+    text('Say "jump" to get Sheldon to dodge the boulders.', (width / 2) - 250, 200);
+  }
 
   if (hasGameStarted) {
     heartXpos.forEach(h => image(heartImg, h, 20));
@@ -200,6 +207,8 @@ function startGame() {
   startBoulder();
 
   setupModels();
+
+  showInstructionText = true;
 }
 
 function endGame() {
@@ -232,6 +241,8 @@ function resetBoulder() {
 }
 
 function jump(sprite) {
+  showInstructionText = false;
+
   if (!isJumping) {
     isJumping = true;
     const j = maxHeight * jumpMultiplier;
