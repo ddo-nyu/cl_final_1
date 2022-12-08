@@ -196,19 +196,21 @@ function createFloor() {
 }
 
 function startGame() {
-  startButton.hide();
+  if (!hasGameStarted) {
+    startButton.hide();
 
-  hasGameStarted = true;
-  isGameEnded = false;
+    hasGameStarted = true;
+    isGameEnded = false;
 
-  setFullHealth();
-  drawBoulder();
-  buildCharacter();
-  startBoulder();
+    setFullHealth();
+    drawBoulder();
+    buildCharacter();
+    startBoulder();
 
-  setupModels();
+    setupModels();
 
-  showInstructionText = true;
+    showInstructionText = true;
+  }
 }
 
 function endGame() {
